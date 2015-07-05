@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" 
+    xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc"
+    xmlns:int-xml="http://www.springframework.org/schema/integration/xml"
+    xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration
+		http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/jdbc
+        http://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd
+        http://www.springframework.org/schema/integration/xml
+        http://www.springframework.org/schema/integration/xml/spring-integration-xml.xsd
+        http://www.springframework.org/schema/integration/jms
+        http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+        http://www.springframework.org/schema/jdbc
+        http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
+
+
+
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+	<property name="driverClassName" value="com.ibm.db2.jcc.DB2Driver" />
+	<property name="url" value="jdbc:db2://localhost:50000/TGXPR01 " />
+	<property name="username" value="db2admin" />
+	<property name="password" value="root" />
+	</bean>
+
+
+<!-- Gateway -->
+
+	<int:gateway id="tradeGateway"
+		default-request-channel="trade-validate-input"
+		default-reply-channel="trade-execute-output"
+		service-interface="org.javadude.trade.service.ITradeProcessor">
+		<int:method name="processTrade"/>
+	</int:gateway>
+	
+	
+	
+
+	<!-- Service Activators -->
+	
+	<int:service-activator id="SAValidate"
+		input-channel="trade-validate-input" output-channel="trade-router-input" ref="tradeValidate" method="validateTrade"/>
+    <int:service-activator id="SAMarketEnricher" 
+		input-channel="market-enricher-input" ref="marketEnricher" method="enrichPayloadMarket"/>
+	<int:service-activator id="SAPMCRequest"
+		input-channel="sor-request-channel" output-channel="transformer-xml2obj-input" ref="pmcHandler" method="pmcRequestHandler"/>
+	<int:service-activator id="SAPMCResponse"
+		input-channel="sor-response-channel" output-channel="transformer-obj2xml-input" ref="pmcHandler" method="pmcResponseHandler"/>
+	<int:service-activator id="SAJmsOutputResponse"
+		input-channel="jms-outut-channel" output-channel="trade-execute-output" ref="jmsResponse" method="jmsResponseHandler"/>
+	
+	
+	
+	
+
+	<!-- Rounters -->
+	
+	<int:router id="initialRouter" input-channel="trade-router-input" ref="tradeValidationResultRouter" method="validationRouter" />
+	<int:router id="marketRouter" input-channel="trade-accpet-input" ref="marketValidationResultRouter" method="marketRouter" />
+	
+	
+	
+	
+	
+	<!-- Enrichers -->	
+	
+	<int:header-enricher id="reply-channel-enricher" input-channel="header-enricher-input" output-channel="header-enrichered-output">
+		<int:reply-channel value="trade-reply-channel"/>
+	</int:header-enricher>
+	<int:enricher id="trade-market-enricher" input-channel="header-enrichered-output" 
+	request-channel="market-enricher-input" output-channel="trade-validate-input">
+	</int:enricher>
+	
+	
+	
+	
+	<!-- Transformers -->
+	<int-xml:unmarshalling-transformer unmarshaller="unmarshaller" 
+	input-channel="transformer-xml2obj-input"
+	output-channel="sor-response-channel">
+	</int-xml:unmarshalling-transformer>
+	
+	<bean id = "unmarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+	<property name="classesToBeBound">
+	<list>
+	<value>org.javadude.trade.vo.Product</value>
+	</list>
+	</property>
+	</bean>
+	
+	<int-xml:marshalling-transformer marshaller="marshaller"
+	 input-channel="transformer-obj2xml-input"
+	 output-channel="jms-input-channel"
+	 result-transformer="resultToStringTransformer">
+	</int-xml:marshalling-transformer>
+	
+	<bean id = "marshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+	<property name="packagesToScan">
+	<list>
+	<value>org.javadude.trade.vo</value>
+	<value>org.javadude.trade.validation</value>
+	</list>
+	</property>
+	</bean>
+	
+	<bean id="resultToStringTransformer" class="org.springframework.integration.xml.transformer.ResultToStringTransformer" />
+	
+	
+	
+	<!-- jdbc -->
+	
+ <int-jdbc:stored-proc-outbound-gateway id="insertTrade"
+   data-source="dataSource" 
+   stored-procedure-name="INSERT_TRADE_REQUEST" 
+   request-channel="trade-persist-input" 
+   reply-channel="trade-execute-output" 
+   return-value-required="false" reply-timeout="0">
+   <int-jdbc:sql-parameter-definition name="P_TRADE_ID" direction="IN" type="VARCHAR"/>
+   <int-jdbc:sql-parameter-definition name="P_TRADE_NM" direction="IN" type="VARCHAR"/>
+   <int-jdbc:sql-parameter-definition name="P_TRADE_SRC" direction="IN" type="VARCHAR"/>
+   <int-jdbc:sql-parameter-definition name="P_TRADE_MKT" direction="IN" type="VARCHAR"/>
+   <int-jdbc:sql-parameter-definition name="P_TRADE_PRC" direction="IN" type="INTEGER"/>
+   <int-jdbc:sql-parameter-definition name="P_TRADE_STA" direction="IN" type="VARCHAR"/>
+   <int-jdbc:parameter name="P_TRADE_ID" expression="payload.trade.tradeId"/>
+   <int-jdbc:parameter name="P_TRADE_NM" expression="payload.trade.tradeName"/>
+   <int-jdbc:parameter name="P_TRADE_SRC" expression="payload.trade.tradeSource"/>
+   <int-jdbc:parameter name="P_TRADE_MKT" expression="payload.trade.tradeMarket"/>
+   <int-jdbc:parameter name="P_TRADE_PRC" expression="payload.trade.tradePrice"/>
+   <int-jdbc:parameter name="P_TRADE_STA" expression="payload.trade.status"/>
+ </int-jdbc:stored-proc-outbound-gateway>
+	
+
+ <!-- jms -->	
+<int-jms:outbound-gateway connection-factory="connectionFactory"
+  request-channel="jms-input-channel"
+  request-destination="requestQueue"
+  reply-channel="jms-output-channel" extract-request-payload="true">  
+</int-jms:outbound-gateway>
+ 
+<bean name = "connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+<property name="brokerURL">
+<value>tcp://localhost:61616</value>
+</property>
+</bean>	
+
+<bean id="requestQueue" class="org.apache.activemq.command.ActiveMQQueue">
+<constructor-arg value="TRADE.REQUEST"/>
+</bean>
+	
+  <!-- beans -->
+		
+	<bean id = "tradeValidate" class="org.javadude.trade.service.impl.TradeValidate" />
+	<bean id = "tradeValidationResultRouter" class="org.javadude.trade.router.ValidationRouter" />
+	<bean id = "marketValidationResultRouter" class="org.javadude.trade.router.MarketRouter"/>
+	<bean id = "marketEnricher" class="org.javadude.trade.enricher.MarketEnricher" />
+	<bean id = "pmcHandler" class="org.javadude.trade.sor.PMCHandler" />
+	<bean id = "jmsResponse" class="org.javadude.trade.sor.JMSHandler" />
+	
+	
+	
+	
+	<!-- channels -->
+	
+	<int:channel id="trade-validate-input"/>
+	<int:channel id="trade-router-input"/>
+	<int:channel id="trade-accpet-input"/>
+	<int:channel id="header-enricher-input"/>
+	<int:channel id="trade-reply-channel"/>
+	<int:channel id="header-enrichered-output"/>
+	<int:channel id="market-enricher-input"/>
+	<int:channel id="trade-persist-input"/>
+	<int:channel id="trade-execute-output"/>
+	<int:channel id="sor-request-channel"/>
+	<int:channel id="sor-response-channel"/>
+	<int:channel id="transformer-xml2obj-input"/>
+	<int:channel id="transformer-obj2xml-input"/>
+	<int:channel id="jms-input-channel"/>
+	<int:channel id="jms-output-channel"/>
+	
+	
+	
+
+	<!-- <int-jdbc:outbound-gateway
+    update="INSERT INTO TRADE_REQUEST VALUES (:tradeId,:tradeName,:tradeSource,:tradeMarket,:tradePrice,:status)"
+    request-channel="trade-persist-input"
+    reply-channel="trade-execute-output"
+    request-sql-parameter-source-factory="requestSource"
+    data-source="dataSource"/>
+    
+    <bean id="requestSource" class="org.springframework.integration.jdbc.ExpressionEvaluatingSqlParameterSourceFactory">
+		<property name="parameterExpressions">
+            <map>
+                <entry key="tradeId" value="payload.trade.tradeId"/>
+                <entry key="tradeName" value="payload.trade.tradeName"/>
+                <entry key="tradeSource" value="payload.trade.tradeSource"/>
+                <entry key="tradeMarket" value="payload.trade.tradeMarket"/>
+                <entry key="tradePrice" value="payload.trade.tradePrice"/>
+                <entry key="status" value="payload.trade.status"/>
+            </map>
+        </property>
+    </bean> -->
+
+
+</beans>
