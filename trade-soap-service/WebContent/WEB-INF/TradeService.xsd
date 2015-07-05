@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="www.javadude.org/trade"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="www.javadude.org/trade"
+	elementFormDefault="qualified">
+
+	
+	<xs:element name="insertTradeRequest">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="validation" type="tns:validation" />
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="insertTradeResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="transaction" type="tns:transaction" />
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:complexType name="validation">
+		<xs:sequence>
+			<xs:element name="trade" type="tns:trade" />
+			<xs:element name="validationStatus" />
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="trade">
+		<xs:sequence>
+			<xs:element name="product" type="tns:product" />
+			<xs:element name="productId" />
+			<xs:element name="status" />
+			<xs:element name="tradeId" />
+			<xs:element name="tradeMarket" />
+			<xs:element name="tradeName" />
+			<xs:element name="tradePrice" />
+			<xs:element name="tradeSource" />
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="product">
+		<xs:sequence>
+			<xs:element name="manufacturer" />
+			<xs:element name="price" />
+			<xs:element name="productId" />
+			<xs:element name="productName" />
+			<xs:element name="yearOfManufacture" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="manufacturer" type="xs:string" />
+	<xs:element name="price" type="xs:integer" />
+	<xs:element name="productName" type="xs:string" />
+	<xs:element name="yearOfManufacture" type="xs:dateTime" />
+	<xs:element name="status" type="xs:NCName" />
+	<xs:element name="tradeId" type="xs:NCName" />
+	<xs:element name="tradeMarket" type="xs:NCName" />
+	<xs:element name="tradeName" type="xs:NCName" />
+	<xs:element name="tradePrice" type="xs:integer" />
+	<xs:element name="tradeSource" type="xs:string" />
+	<xs:element name="validationStatus" type="xs:string" />
+	<xs:element name="productId" type="xs:NCName" />
+	
+	<xs:complexType name="transaction">
+		<xs:sequence>
+			<xs:element name="transactionId" type="xs:string" />
+			<xs:element name="transactionMessage" type="xs:string" />
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

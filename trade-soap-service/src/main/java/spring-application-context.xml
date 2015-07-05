@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:sws="http://www.springframework.org/schema/web-services"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	   					   http://www.springframework.org/schema/beans/spring-beans.xsd
+	   					   http://www.springframework.org/schema/context
+	  					   http://www.springframework.org/schema/context/spring-context.xsd
+	   			           http://www.springframework.org/schema/web-services
+                           http://www.springframework.org/schema/web-services/web-services.xsd">
+    
+    <context:annotation-config/>
+	<context:component-scan base-package="org.javadude.trade.sbi,org.javadude.trade.dao.impl" /> 
+
+   <!-- Initialization for data source -->
+	
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+	<property name="driverClassName" value="com.ibm.db2.jcc.DB2Driver" />
+	<property name="url" value="jdbc:db2://localhost:50000/TGXPR01 " />
+	<property name="username" value="db2admin" />
+	<property name="password" value="root" />
+	</bean>
+
+  
+   <bean id="tradeRequestDAOImpl" 
+      class="org.javadude.trade.dao.impl.TradeRequestDAOImpl">
+      <property name="dataSource"  ref="dataSource" />    
+   </bean>
+   
+   <bean id="tradeService" 
+      class="org.javadude.trade.sbi.TradeService" />
+      
+   
+   <bean id="insertTradeRequest" parent="tradeStoredProc">
+   <constructor-arg name="dataSource"><ref bean="dataSource"/></constructor-arg>
+   <constructor-arg name="strProcName"><value>LENOVO.USP_INSERT_REQUEST</value></constructor-arg>
+   <constructor-arg name="declaredParameters">
+   <list>
+   <bean parent="sqlCharacter"><constructor-arg><value>P_TRADE_ID</value></constructor-arg></bean>
+   <bean parent="sqlCharacter"><constructor-arg><value>P_TRADE_NM</value></constructor-arg></bean>
+   <bean parent="sqlCharacter"><constructor-arg><value>P_TRADE_SRC</value></constructor-arg></bean>
+   <bean parent="sqlCharacter"><constructor-arg><value>P_TRADE_MKT</value></constructor-arg></bean>
+   <bean parent="sqlNumber"><constructor-arg><value>P_TRADE_PRC</value></constructor-arg></bean>
+   <bean parent="sqlCharacter"><constructor-arg><value>P_TRADE_STA</value></constructor-arg></bean>
+   <bean parent="sqlCharacter"><constructor-arg><value>P_PRODUCT_ID</value></constructor-arg></bean>
+   <bean parent="sqlNumberOut"><constructor-arg><value>P_AUDIT_ID</value></constructor-arg></bean>
+   </list>
+   </constructor-arg>
+   <constructor-arg name="rowMapper"><null /></constructor-arg>
+   </bean>
+   
+   <bean id="tradeStoredProc" class="org.javadude.trade.base.TradeStoredProcedure" abstract="true"/>
+   
+   <bean id="sqlCharacter" class="org.springframework.jdbc.core.SqlParameter" abstract="true">
+   <constructor-arg index="1">
+   <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+   <property name="staticField"><value>java.sql.Types.CHAR</value></property>
+   </bean>
+   </constructor-arg>
+   </bean>
+   
+   <bean id="sqlNumber" class="org.springframework.jdbc.core.SqlParameter" abstract="true">
+   <constructor-arg index="1">
+   <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+   <property name="staticField"><value>java.sql.Types.NUMERIC</value></property>
+   </bean>
+   </constructor-arg>
+   </bean>
+   
+   <bean id="sqlNumberOut" class="org.springframework.jdbc.core.SqlOutParameter" abstract="true">
+   <constructor-arg index="1">
+   <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+   <property name="staticField"><value>java.sql.Types.NUMERIC</value></property>
+   </bean>
+   </constructor-arg>
+   </bean>
+      
+</beans>
