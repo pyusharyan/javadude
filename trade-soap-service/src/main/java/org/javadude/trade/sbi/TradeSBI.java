@@ -1,8 +1,9 @@
 package org.javadude.trade.sbi;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.javadude.trade.context.TradeContext;
 import org.javadude.trade.request.InsertTradeRequest;
 import org.javadude.trade.request.Trade;
@@ -19,19 +20,22 @@ import org.springframework.ws.server.endpoint.annotation.ResponsePayload;
 public class TradeSBI implements TradeSEI {
 
 	final String CLASS_NAME = "TradeSBI";
-	Logger log = Logger.getLogger(CLASS_NAME);
 	
+	Logger debugLog = Logger.getLogger("debugLogger");
+	Logger infoLog = Logger.getLogger(CLASS_NAME);
 	
 	TradeService tradeService;
+	
 	
 	@PayloadRoot(namespace="www.javadude.org/trade", localPart="insertTradeRequest")
 	@ResponsePayload
 	public InsertTradeResponse insertTrade(@RequestPayload InsertTradeRequest insertTradeRequest) {
 		
+		debugLog.debug(CLASS_NAME+" : Entering method InsertTradeResponse");
 		InsertTradeResponse insertTradeResponse = new InsertTradeResponse();
-		log.setLevel(Level.FINE);
-		log.log(Level.FINE,"Calling Service");
 		
+		infoLog.info("Calling Service");
+		long startTime = System.currentTimeMillis();
 		Validation validation = insertTradeRequest.getValidation();
 		if(validation != null){
 		Trade trade = validation.getTrade();
@@ -41,18 +45,20 @@ public class TradeSBI implements TradeSEI {
 		Transaction transaction = 
 				tradeService.persistTrade(trade);
 		
-		log.log(Level.FINE,"Inserted Succesfully");
+		infoLog.info("Inserted Succesfully");
 		
 		insertTradeResponse.setTransaction(transaction);
 		}
 		else{
-			log.log(Level.WARNING,"Trade is null");
+			infoLog.warn("Trade is null");
 		}
 		}
 		else{
-			log.log(Level.WARNING,"Validation is null");
+			infoLog.warn("Validation is null");
 		}
-		
+		long endTime = System.currentTimeMillis();
+		debugLog.debug("total time taken to persist : "+(endTime-startTime)+" millis");
+		debugLog.debug(CLASS_NAME+" : Exiting method InsertTradeResponse");
 		return insertTradeResponse;
 	}
 

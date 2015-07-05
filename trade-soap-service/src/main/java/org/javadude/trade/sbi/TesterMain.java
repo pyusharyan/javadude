@@ -12,7 +12,11 @@ public class TesterMain {
 
 	public static void main(String[] args) {
 		
+		//PropertyConfigurator.configure("log4j.properties");
+		
 		InsertTradeRequest insertTradeRequest = new InsertTradeRequest();
+		
+		
 		
 		Validation validation = new Validation();
 		

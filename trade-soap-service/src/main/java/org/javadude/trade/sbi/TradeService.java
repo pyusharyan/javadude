@@ -1,9 +1,8 @@
 package org.javadude.trade.sbi;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import org.javadude.trade.dao.ITradeRequestDAO;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.javadude.trade.dao.impl.TradeRequestDAOImpl;
 import org.javadude.trade.exception.TradeException;
 import org.javadude.trade.request.Trade;
@@ -18,26 +17,28 @@ public class TradeService {
 	TradeRequestDAOImpl tradeDAO;
 	
 	final String CLASS_NAME = "TradeService";
-	Logger log = Logger.getLogger(CLASS_NAME);
+	
+	Logger debugLog = Logger.getLogger("debugLogger");
+	Logger infoLog = Logger.getLogger(CLASS_NAME);
 	
 	public Transaction persistTrade(Trade trade){
+		debugLog.debug(CLASS_NAME+": Entering method persistTrade");
 		int auditId = 0;
 		 Transaction transaction = new Transaction();
 		 
 		try{ 
-			log.setLevel(Level.FINE);
-			log.log(Level.FINE,"Calling Dao");
+			infoLog.info("Calling Dao");
 			auditId = tradeDAO.insertTrade(trade);
-			log.log(Level.FINE,"Persisted Succesfully");
+			infoLog.info("Persisted Succesfully");
 			transaction.setTransactionId(String.valueOf(auditId));
 			transaction.setTransactionMessage("Trade Persisted Successfully");
 		}
 		catch(TradeException te){
-			log.log(Level.SEVERE, te.getMessage(), te);
+			infoLog.error(te.getMessage(), te);
 			transaction.setTransactionId(String.valueOf(auditId));
 			transaction.setTransactionMessage("Persist Failure");
 		}
-		
+		debugLog.debug(CLASS_NAME+" : Exiting method persistTrade");
 		return transaction;
 	}
 }
