@@ -45,6 +45,7 @@ public class ClientCaller {
 		
 		System.out.println(insertTradeResponse);
 		
+		
 
 	}
 
